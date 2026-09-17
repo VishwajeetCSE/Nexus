@@ -86,3 +86,67 @@ INSERT INTO posts (id, campus_id, user_name, user_role_tag, title, content, cate
 ('post-5', 'polaris-blr', 'Polaris Academic Directorate', 'admin', 'Winter Cohort AI & Distributed Systems Bootcamp', 'Registration closes this Friday for the 4-week industry mentorship sprint with top founders and architects.', 'Official Alert', 88, false, false, NOW() - INTERVAL '1 hour'),
 ('post-6', 'polaris-blr', 'Anonymous Student', 'student', 'SOS: Roommate needed near HSR Layout 5th Sector', 'Looking for a flatmate starting next month within walking distance of Polaris campus. Rent ~12k/month. Any leads?', 'SOS Query', 19, true, true, NOW() - INTERVAL '4 hours')
 ON CONFLICT (id) DO NOTHING;
+
+-- 8. VERIFIED STUDENTS TABLE
+CREATE TABLE IF NOT EXISTS verified_students (
+    id TEXT PRIMARY KEY,
+    campus_id TEXT NOT NULL REFERENCES campuses(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    roll_number TEXT NOT NULL,
+    branch TEXT NOT NULL,
+    grad_year INTEGER NOT NULL,
+    is_verified BOOLEAN DEFAULT true NOT NULL,
+    session_token TEXT NOT NULL,
+    verified_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 9. CAMPUS REVIEWS TABLE
+CREATE TABLE IF NOT EXISTS campus_reviews (
+    id TEXT PRIMARY KEY DEFAULT uuid_generate_v4()::text,
+    campus_id TEXT NOT NULL REFERENCES campuses(id) ON DELETE CASCADE,
+    student_id TEXT NOT NULL,
+    student_name TEXT NOT NULL,
+    branch TEXT NOT NULL,
+    grad_year INTEGER NOT NULL,
+    is_verified BOOLEAN DEFAULT true NOT NULL,
+    overall_rating INTEGER CHECK (overall_rating BETWEEN 1 AND 5) NOT NULL,
+    academics_rating INTEGER CHECK (academics_rating BETWEEN 1 AND 5) NOT NULL,
+    infrastructure_rating INTEGER CHECK (infrastructure_rating BETWEEN 1 AND 5) NOT NULL,
+    placement_rating INTEGER CHECK (placement_rating BETWEEN 1 AND 5) NOT NULL,
+    review_title TEXT NOT NULL,
+    review_text TEXT NOT NULL,
+    pros TEXT NOT NULL,
+    cons TEXT NOT NULL,
+    visiting_companies_experienced JSONB DEFAULT '[]'::jsonb,
+    backlog_advice TEXT,
+    upvotes_count INTEGER DEFAULT 0 NOT NULL,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 10. CAMPUS PLACEMENT STATS TABLE
+CREATE TABLE IF NOT EXISTS campus_placement_stats (
+    id TEXT PRIMARY KEY DEFAULT uuid_generate_v4()::text,
+    campus_id TEXT NOT NULL REFERENCES campuses(id) ON DELETE CASCADE,
+    academic_year TEXT NOT NULL,
+    highest_ctc_lpa NUMERIC(6, 2) NOT NULL,
+    avg_ctc_lpa NUMERIC(6, 2) NOT NULL,
+    placement_rate_pct NUMERIC(5, 2) NOT NULL,
+    total_offers INTEGER NOT NULL,
+    total_eligible_students INTEGER NOT NULL,
+    top_recruiters JSONB DEFAULT '[]'::jsonb,
+    backlog_trends JSONB NOT NULL,
+    past_years_comparison JSONB DEFAULT '[]'::jsonb,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(campus_id, academic_year)
+);
+
+-- RLS for Reviews and Placement Data
+ALTER TABLE verified_students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE campus_reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE campus_placement_stats ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read verified reviews" ON campus_reviews FOR SELECT USING (true);
+CREATE POLICY "Insert verified reviews" ON campus_reviews FOR INSERT WITH CHECK (is_verified = true);
+CREATE POLICY "Public read placement stats" ON campus_placement_stats FOR SELECT USING (true);
+

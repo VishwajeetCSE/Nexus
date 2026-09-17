@@ -4,6 +4,8 @@ import React from "react";
 import { useCampus } from "@/context/CampusContext";
 import PulseFeed from "@/components/PulseFeed";
 import SOSHub from "@/components/SOSHub";
+import PlacementStatsWidget from "@/components/PlacementStatsWidget";
+import CampusReviewsFeed from "@/components/CampusReviewsFeed";
 import { 
   Radio, 
   LifeBuoy, 
@@ -16,7 +18,9 @@ import {
   PlusCircle,
   Database,
   ShieldCheck,
-  Server
+  Server,
+  Briefcase,
+  Star
 } from "lucide-react";
 
 export default function Home() {
@@ -41,10 +45,10 @@ export default function Home() {
       <div className="lg:col-span-8 space-y-4">
         {/* Tab Navigation Pill Bar */}
         <div className="flex items-center justify-between bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
             <button
               onClick={() => setActiveTab("pulse")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${
                 activeTab === "pulse"
                   ? "bg-blue-600 text-white shadow-glow-sm"
                   : "text-slate-400 hover:text-slate-200 hover:bg-slate-850"
@@ -59,7 +63,7 @@ export default function Home() {
 
             <button
               onClick={() => setActiveTab("sos")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${
                 activeTab === "sos"
                   ? "bg-rose-600 text-white shadow-glow-sos"
                   : "text-slate-400 hover:text-slate-200 hover:bg-slate-850"
@@ -73,9 +77,21 @@ export default function Home() {
                 </span>
               )}
             </button>
+
+            <button
+              onClick={() => setActiveTab("placements")}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${
+                activeTab === "placements"
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-850"
+              }`}
+            >
+              <Briefcase className="w-4 h-4" />
+              <span>Placements &amp; Reviews</span>
+            </button>
           </div>
 
-          <div className="hidden sm:flex items-center gap-1.5 pr-2 text-xs text-slate-400">
+          <div className="hidden sm:flex items-center gap-1.5 pr-2 text-xs text-slate-400 shrink-0">
             <MapPin className="w-3.5 h-3.5 text-slate-500" />
             <span className="font-semibold text-slate-300 truncate max-w-[150px]">
               {activeCampus.name.split(" ")[0]}
@@ -84,7 +100,14 @@ export default function Home() {
         </div>
 
         {/* Dynamic View rendering */}
-        {activeTab === "pulse" ? <PulseFeed /> : <SOSHub />}
+        {activeTab === "pulse" && <PulseFeed />}
+        {activeTab === "sos" && <SOSHub />}
+        {activeTab === "placements" && (
+          <div className="space-y-6">
+            <PlacementStatsWidget />
+            <CampusReviewsFeed />
+          </div>
+        )}
       </div>
 
       {/* Sidebar (Desktop / Tablet) */}

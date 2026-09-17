@@ -12,7 +12,9 @@ import {
   PlusCircle, 
   Radio, 
   ExternalLink,
-  ChevronDown
+  ChevronDown,
+  ShieldCheck,
+  GraduationCap
 } from "lucide-react";
 
 export default function Navbar() {
@@ -28,6 +30,8 @@ export default function Navbar() {
     setSearchQuery,
     filteredCampuses,
     setIsCampusSwitcherOpen,
+    verifiedStudent,
+    setIsStudentVerifyModalOpen,
   } = useCampus();
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -191,6 +195,22 @@ export default function Navbar() {
 
         {/* Campus Switcher & Developer Spin-up Button */}
         <div className="flex items-center gap-2 shrink-0">
+          {/* Student ID Verification Pill Button */}
+          <button
+            onClick={() => setIsStudentVerifyModalOpen(true)}
+            className={`hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
+              verifiedStudent
+                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25"
+                : "bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700"
+            }`}
+            title="Student ID Verification"
+          >
+            <ShieldCheck className={`w-4 h-4 ${verifiedStudent ? "text-emerald-400" : "text-blue-400"}`} />
+            <span>
+              {verifiedStudent ? `${verifiedStudent.name.split(" ")[0]} 🎓` : "Verify Student ID"}
+            </span>
+          </button>
+
           {/* Active Campus Badge Dropdown Trigger */}
           <button
             onClick={() => setIsCampusSwitcherOpen(true)}

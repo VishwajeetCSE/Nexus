@@ -5,6 +5,8 @@ import Navbar from "@/components/Navbar";
 import CampusSwitcherModal from "@/components/CampusSwitcherModal";
 import DevPortalModal from "@/components/DevPortalModal";
 import CreatePostModal from "@/components/CreatePostModal";
+import StudentVerificationModal from "@/components/StudentVerificationModal";
+import CreateReviewModal from "@/components/CreateReviewModal";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
 export const metadata: Metadata = {
@@ -37,6 +39,8 @@ export default function RootLayout({
           <CampusSwitcherModal />
           <DevPortalModal />
           <CreatePostModal />
+          <CreateReviewModal />
+          <StudentVerificationModal />
           <MobileBottomNav />
         </CampusProvider>
       </body>

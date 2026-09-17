@@ -3,14 +3,16 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Campus, Post, SOSAnswer, CategoryTag, UserRoleTag, NewCampusPayload } from "@/lib/types";
 import { INITIAL_CAMPUSES, INITIAL_POSTS } from "@/lib/mock-data";
+import { CampusReview, VerifiedStudentSession } from "@/lib/review-types";
+import { INITIAL_CAMPUS_REVIEWS } from "@/lib/placement-mock-data";
 
 interface CampusContextType {
   campuses: Campus[];
   activeCampus: Campus;
   homeCampus: Campus;
   isPeeking: boolean;
-  activeTab: "pulse" | "sos" | "explore";
-  setActiveTab: (tab: "pulse" | "sos" | "explore") => void;
+  activeTab: "pulse" | "sos" | "placements" | "explore";
+  setActiveTab: (tab: "pulse" | "sos" | "placements" | "explore") => void;
   selectedCategory: CategoryTag;
   setSelectedCategory: (cat: CategoryTag) => void;
   searchQuery: string;
@@ -40,34 +42,67 @@ interface CampusContextType {
   setIsCreatePostModalOpen: (open: boolean) => void;
   isCampusSwitcherOpen: boolean;
   setIsCampusSwitcherOpen: (open: boolean) => void;
+
+  // Student ID Verification & Reviews State
+  verifiedStudent: VerifiedStudentSession | null;
+  verifyStudentSession: (session: VerifiedStudentSession) => void;
+  logoutStudent: () => void;
+  isStudentVerifyModalOpen: boolean;
+  setIsStudentVerifyModalOpen: (open: boolean) => void;
+  isCreateReviewModalOpen: boolean;
+  setIsCreateReviewModalOpen: (open: boolean) => void;
+  reviews: CampusReview[];
+  addReview: (reviewData: {
+    title: string;
+    content: string;
+    overall_rating: number;
+    academics_rating: number;
+    infrastructure_rating: number;
+    placement_rating: number;
+    pros: string;
+    cons: string;
+    visiting_companies_experienced: string[];
+    backlog_advice: string;
+  }) => Promise<void>;
+  upvoteReview: (reviewId: string) => void;
 }
 
 const CampusContext = createContext<CampusContextType | undefined>(undefined);
 
 const CAMPUSES_STORAGE_KEY = "nexus_campuses_v1";
 const POSTS_STORAGE_KEY = "nexus_posts_v1";
+const REVIEWS_STORAGE_KEY = "nexus_reviews_v1";
 const HOME_CAMPUS_KEY = "nexus_home_campus_v1";
 const ACTIVE_CAMPUS_KEY = "nexus_active_campus_v1";
+const STUDENT_SESSION_KEY = "nexus_student_session_v1";
 
 export function CampusProvider({ children }: { children: React.ReactNode }) {
   const [campuses, setCampuses] = useState<Campus[]>(INITIAL_CAMPUSES);
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
+  const [reviews, setReviews] = useState<CampusReview[]>(INITIAL_CAMPUS_REVIEWS);
   const [homeCampus, setHomeCampus] = useState<Campus>(INITIAL_CAMPUSES[0]); // Bhopal default
   const [activeCampus, setActiveCampus] = useState<Campus>(INITIAL_CAMPUSES[0]);
-  const [activeTab, setActiveTab] = useState<"pulse" | "sos" | "explore">("pulse");
+  const [activeTab, setActiveTab] = useState<"pulse" | "sos" | "placements" | "explore">("pulse");
   const [selectedCategory, setSelectedCategory] = useState<CategoryTag>("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [isDevModalOpen, setIsDevModalOpen] = useState(false);
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
   const [isCampusSwitcherOpen, setIsCampusSwitcherOpen] = useState(false);
 
+  // Student verification states
+  const [verifiedStudent, setVerifiedStudent] = useState<VerifiedStudentSession | null>(null);
+  const [isStudentVerifyModalOpen, setIsStudentVerifyModalOpen] = useState(false);
+  const [isCreateReviewModalOpen, setIsCreateReviewModalOpen] = useState(false);
+
   // Load from localStorage on mount (hydration safe)
   useEffect(() => {
     try {
       const storedCampuses = localStorage.getItem(CAMPUSES_STORAGE_KEY);
       const storedPosts = localStorage.getItem(POSTS_STORAGE_KEY);
+      const storedReviews = localStorage.getItem(REVIEWS_STORAGE_KEY);
       const storedHomeId = localStorage.getItem(HOME_CAMPUS_KEY);
       const storedActiveId = localStorage.getItem(ACTIVE_CAMPUS_KEY);
+      const storedStudent = localStorage.getItem(STUDENT_SESSION_KEY);
 
       let currentCampuses = INITIAL_CAMPUSES;
       if (storedCampuses) {
@@ -77,6 +112,14 @@ export function CampusProvider({ children }: { children: React.ReactNode }) {
 
       if (storedPosts) {
         setPosts(JSON.parse(storedPosts));
+      }
+
+      if (storedReviews) {
+        setReviews(JSON.parse(storedReviews));
+      }
+
+      if (storedStudent) {
+        setVerifiedStudent(JSON.parse(storedStudent));
       }
 
       if (storedHomeId) {
@@ -109,6 +152,33 @@ export function CampusProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(POSTS_STORAGE_KEY, JSON.stringify(newPosts));
     } catch (e) {
       console.warn("Nexus: Storage failed", e);
+    }
+  };
+
+  const saveReviews = (newReviews: CampusReview[]) => {
+    setReviews(newReviews);
+    try {
+      localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(newReviews));
+    } catch (e) {
+      console.warn("Nexus: Storage failed", e);
+    }
+  };
+
+  const verifyStudentSession = (session: VerifiedStudentSession) => {
+    setVerifiedStudent(session);
+    try {
+      localStorage.setItem(STUDENT_SESSION_KEY, JSON.stringify(session));
+    } catch (e) {
+      console.warn(e);
+    }
+  };
+
+  const logoutStudent = () => {
+    setVerifiedStudent(null);
+    try {
+      localStorage.removeItem(STUDENT_SESSION_KEY);
+    } catch (e) {
+      console.warn(e);
     }
   };
 
@@ -163,7 +233,7 @@ export function CampusProvider({ children }: { children: React.ReactNode }) {
 
   // Normal feed posts
   const activePosts = activeCampusPosts.filter((p) => {
-    if (p.is_sos) return false; // SOS queries go to dedicated hub
+    if (p.is_sos) return false;
     if (selectedCategory === "All") return true;
     return p.category_tag === selectedCategory;
   });
@@ -233,7 +303,6 @@ export function CampusProvider({ children }: { children: React.ReactNode }) {
     const updated = posts.map((p) => {
       if (p.id === postId) {
         const answers = p.answers ? [...p.answers, newAnswer] : [newAnswer];
-        // Sort answers with highest upvotes at top
         answers.sort((a, b) => b.upvotes_count - a.upvotes_count);
         return { ...p, answers };
       }
@@ -251,13 +320,84 @@ export function CampusProvider({ children }: { children: React.ReactNode }) {
           }
           return ans;
         });
-        // Sort highest voted answers to the top
         answers.sort((a, b) => b.upvotes_count - a.upvotes_count);
         return { ...p, answers };
       }
       return p;
     });
     savePosts(updated);
+  };
+
+  const addReview = async (reviewData: {
+    title: string;
+    content: string;
+    overall_rating: number;
+    academics_rating: number;
+    infrastructure_rating: number;
+    placement_rating: number;
+    pros: string;
+    cons: string;
+    visiting_companies_experienced: string[];
+    backlog_advice: string;
+  }) => {
+    const newReview: CampusReview = {
+      id: `rev-${Date.now()}`,
+      campus_id: activeCampus.id,
+      student_id: verifiedStudent?.student_id || `std-${Date.now()}`,
+      student_name: verifiedStudent?.name || "Verified Student",
+      student_roll_prefix: verifiedStudent?.roll_number ? `${verifiedStudent.roll_number.slice(0, 6)}XX` : "Verified Roll",
+      branch: verifiedStudent?.branch || "Computer Science",
+      grad_year: verifiedStudent?.grad_year || 2026,
+      is_verified: true,
+      overall_rating: reviewData.overall_rating,
+      academics_rating: reviewData.academics_rating,
+      infrastructure_rating: reviewData.infrastructure_rating,
+      placement_rating: reviewData.placement_rating,
+      review_title: reviewData.title,
+      review_text: reviewData.content,
+      pros: reviewData.pros,
+      cons: reviewData.cons,
+      visiting_companies_experienced: reviewData.visiting_companies_experienced,
+      backlog_advice: reviewData.backlog_advice,
+      upvotes_count: 1,
+      timestamp: new Date().toISOString(),
+    };
+
+    const updated = [newReview, ...reviews];
+    saveReviews(updated);
+
+    // Call API route in background for server state sync
+    try {
+      await fetch("/api/reviews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${verifiedStudent?.session_token || "nexus_std_token"}`,
+        },
+        body: JSON.stringify({
+          ...reviewData,
+          campus_id: activeCampus.id,
+          session_token: verifiedStudent?.session_token,
+          student_name: verifiedStudent?.name,
+          branch: verifiedStudent?.branch,
+          grad_year: verifiedStudent?.grad_year,
+          review_title: reviewData.title,
+          review_text: reviewData.content,
+        }),
+      });
+    } catch (e) {
+      console.warn("Server review sync fallback:", e);
+    }
+  };
+
+  const upvoteReview = (reviewId: string) => {
+    const updated = reviews.map((r) => {
+      if (r.id === reviewId) {
+        return { ...r, upvotes_count: r.upvotes_count + 1 };
+      }
+      return r;
+    });
+    saveReviews(updated);
   };
 
   const registerCampus = (payload: NewCampusPayload): Campus => {
@@ -316,6 +456,18 @@ export function CampusProvider({ children }: { children: React.ReactNode }) {
         setIsCreatePostModalOpen,
         isCampusSwitcherOpen,
         setIsCampusSwitcherOpen,
+
+        // Student Verification & Reviews
+        verifiedStudent,
+        verifyStudentSession,
+        logoutStudent,
+        isStudentVerifyModalOpen,
+        setIsStudentVerifyModalOpen,
+        isCreateReviewModalOpen,
+        setIsCreateReviewModalOpen,
+        reviews,
+        addReview,
+        upvoteReview,
       }}
     >
       {children}
